@@ -38,29 +38,28 @@ thread_list = []
 stop_signal = False
 
 
-def signal_handler(signal, frame):
+def signal_handler(signal_received_value, frame):
     global stop_signal
-    stop_signal=True
-    time.sleep(0.5)
-    exit()
+    print(f"Signal {signal_received_value} received in multi_camera.py. Stopping threads...")
+    stop_signal = True
 
 
 def grab_run(index):
     global stop_signal
     global zed_list
-    global timestamp_list
-    global left_list
-    global depth_list
 
     runtime = sl.RuntimeParameters()
+    print(f"Grab thread for camera {index} started.")
     while not stop_signal:
-        err = zed_list[index].grab(runtime)
-        #if err == sl.ERROR_CODE.SUCCESS:
-            #zed_list[index].retrieve_image(left_list[index], sl.VIEW.LEFT)
-            #zed_list[index].retrieve_measure(depth_list[index], sl.MEASURE.DEPTH)
-            #timestamp_list[index] = zed_list[index].get_timestamp(sl.TIME_REFERENCE.CURRENT).data_ns
-        time.sleep(0.001) #1ms
+        if zed_list[index].grab(runtime) == sl.ERROR_CODE.SUCCESS:
+            pass
+        else:
+            pass
+        time.sleep(0.001)
+
+    zed_list[index].disable_recording()
     zed_list[index].close()
+    print(f"Grab thread for camera {index} finished and camera closed.")
 
 
 def main():
@@ -70,59 +69,86 @@ def main():
     global depth_list
     global timestamp_list
     global thread_list
+
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
-    print("Running...")
+    print("Running multi_camera.py...")
     init = sl.InitParameters()
-    init.camera_resolution = sl.RESOLUTION.HD2K # either HD720 at 60fps or HD1080 at 30
-    init.camera_fps = 10  # The framerate is lowered to avoid any USB3 bandwidth issues  60 fps only at HD720
+    init.camera_resolution = sl.RESOLUTION.HD2K
+    init.camera_fps = 10
 
-
-    #List and open cameras
     name_list = []
-    last_ts_list = []
+
     cameras = sl.Camera.get_device_list()
+    if not cameras:
+        print("No ZED cameras detected. Exiting.")
+        return
+
     index = 0
     rec_timestamp = str(int(time.time()))
-    for cam in cameras:
-        init.set_from_serial_number(cam.serial_number)
-        name_list.append("ZED {}".format(cam.serial_number))
-        print("Opening {}".format(name_list[index]))
-        zed_list.append(sl.Camera())
-        left_list.append(sl.Mat())
-        depth_list.append(sl.Mat())
-        timestamp_list.append(0)
-        last_ts_list.append(0)
-        
-        #status = zed_list[index].open(init)
-        path_create = rf'/home/sopho/Videos/Rec_9/Rec'
-        os.makedirs(path_create, exist_ok=True)
-        output_path = os.path.join(rf'/home/sopho/Videos/Rec_9/Rec', f"rec_{index}_{rec_timestamp}.svo")
-        status = zed_list[index].open(init)
-        params = sl.RecordingParameters(video_filename=output_path, compression_mode=sl.SVO_COMPRESSION_MODE.LOSSLESS)
-        err = zed_list[index].enable_recording(params)
+    for cam_info in cameras:
+        init.set_from_serial_number(cam_info.serial_number)
+        name_list.append(f"ZED {cam_info.serial_number}")
+        print(f"Opening {name_list[index]}...")
 
+        current_zed = sl.Camera()
+        zed_list.append(current_zed)
+
+        path_create = rf'/home/chris/Videos/Rec_6/Rec'
+        output_path = os.path.join(path_create, f"rec_{index}_{rec_timestamp}.svo")
+
+        status = current_zed.open(init)
         if status != sl.ERROR_CODE.SUCCESS:
-            print(repr(status))
-            zed_list[index].close()
-        index = index +1
-    
-    #Start camera threads
-    for index in range(0, len(zed_list)):
-        if zed_list[index].is_opened():
-            thread_list.append(threading.Thread(target=grab_run, args=(index,)))
-            thread_list[index].start()
+            print(f"Error opening camera {cam_info.serial_number}: {status}")
+            continue
 
-    key = ''
-    while key != "q":  # for 'q' key
-        key = input("Enter q to stop.")
+        params = sl.RecordingParameters(video_filename=output_path, compression_mode=sl.SVO_COMPRESSION_MODE.LOSSLESS)
+        err = current_zed.enable_recording(params)
+        if err != sl.ERROR_CODE.SUCCESS:
+            print(f"Error enabling recording for {cam_info.serial_number}: {err}")
+            current_zed.close()
+            continue
 
-    #Stop the threads
-    stop_signal = True
-    for index in range(0, len(thread_list)):
-        thread_list[index].join()
+        print(f"Successfully opened and enabled recording for {name_list[index]} to {output_path}")
+        index += 1
 
-    print("\nFINISH")
+    if not zed_list:
+        print("No cameras were successfully opened. Exiting.")
+        return
+
+    all_threads_started = True
+    for i in range(len(zed_list)):
+        if zed_list[i].is_opened():
+            t = threading.Thread(target=grab_run, args=(i,))
+            thread_list.append(t)
+            t.start()
+        else:
+            all_threads_started = False
+            print(f"Error: Camera {i} reported not opened before starting thread.")
+
+    if all_threads_started and thread_list:
+        print("CAMERAS_RECORDING_STARTED_SIGNAL", flush=True)
+    else:
+        print("Not all camera threads started or no cameras successfully initialized. Stopping.")
+        stop_signal = True
+
+    while not stop_signal:
+        if not any(t.is_alive() for t in thread_list):
+            print("All grab threads have unexpectedly stopped.")
+            stop_signal = True
+            break
+        time.sleep(0.1)
+
+    print("Stop signal received or threads finished. Joining threads in multi_camera.py...")
+    for t in thread_list:
+        if t.is_alive():
+            t.join(timeout=5.0)
+            if t.is_alive():
+                print(f"Warning: Thread {t.name} did not join in time.")
+
+    print("multi_camera.py finished.")
+
 
 if __name__ == "__main__":
     main()

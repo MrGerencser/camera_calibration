@@ -111,7 +111,7 @@ def plot_camera(ax, R, T, cam_idx, scale=0.1, add_labels=False):
     ax.plot(world_points[0, :4:3], world_points[1, :4:3], world_points[2, :4:3], color="b", label="Z" if add_labels else None)
     ax.axis('equal')
 
-info_folder = "/home/sopho/Videos/Rec_8/calib/info"  # Replace with the path to your info folder
+info_folder = "/home/sopho/camera_calibration_recs/Rec_1/calib/info"  # Replace with the path to your info folder
 
 # Load extrinsics
 extrinsics = cam_params.load_extrinsics(info_folder)

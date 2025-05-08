@@ -7,11 +7,12 @@ import cv2
 import cam_params
 
 
-#Create a folder called calib which contains all the data extracted from the svo files and the run the code
+#Create a folder called calib which contains all the data extracted from the svo files and the run the codey
+
 def find_cb_corners(img, block_sizes):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # adaptiveThreshold can improve or deteriorate calibration
-    #gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 2)
+    #gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 2)y
     gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_sizes[svo_idx], 2)
     ret, corners_2d = cv2.findChessboardCorners(gray, chessboard_size, None)
     #cb_width = corners_2d[:, 0, 0].max() - corners_2d[:, 0, 0].min()
@@ -29,8 +30,8 @@ cb_3d = np.zeros((chessboard_size[0] * chessboard_size[1], 3), np.float32)
 cb_3d[:, :2] = np.mgrid[0:chessboard_size[0], 0:chessboard_size[1]].T.reshape(-1, 2)
 cb_3d *= square_size
 
-# iterate through recs
-path = rf'/home/sopho/Videos/Rec_9'
+# iterate through 
+path = rf'/home/chris/Videos/Rec_6'
 # Info folder
 info_folder = os.path.join(path, "calib", "info")
 os.makedirs(info_folder, exist_ok=True)
