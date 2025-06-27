@@ -31,7 +31,7 @@ cb_3d[:, :2] = np.mgrid[0:chessboard_size[0], 0:chessboard_size[1]].T.reshape(-1
 cb_3d *= square_size
 
 # iterate through 
-path = rf'/home/chris/Videos/Rec_6'
+path = rf'/home/chris/Videos/Rec_83'
 # Info folder
 info_folder = os.path.join(path, "calib", "info")
 os.makedirs(info_folder, exist_ok=True)

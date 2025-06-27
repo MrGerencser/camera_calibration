@@ -95,7 +95,7 @@ def main():
         current_zed = sl.Camera()
         zed_list.append(current_zed)
 
-        path_create = rf'/home/chris/Videos/Rec_6/Rec'
+        path_create = rf'/home/chris/Videos/Rec_83/Rec'
         output_path = os.path.join(path_create, f"rec_{index}_{rec_timestamp}.svo")
 
         status = current_zed.open(init)

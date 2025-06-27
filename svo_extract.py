@@ -181,7 +181,7 @@ extract_recs = True
 init_params = sl.InitParameters()
 init_params.depth_mode = sl.DEPTH_MODE.ULTRA
 
-path = rf'/home/chris/Videos/Rec_6'
+path = rf'/home/chris/Videos/Rec_83'
 recs = [os.path.join(path, filename) for filename in os.listdir(path)]
 
 for rec in recs:

@@ -7,7 +7,7 @@ import cam_params
 from transforms3d import euler, affines
 
 import matplotlib
-import tf
+import tensorflow as tf
 matplotlib.use("TkAgg")
 
 

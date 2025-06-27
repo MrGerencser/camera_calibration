@@ -38,7 +38,7 @@ def flow_style_representer(dumper, data):
 
 def main():
     np.set_printoptions(precision=4, suppress=True)
-    info_folder = "/home/chris/Videos/Rec_6/calib/info" 
+    info_folder = "/home/chris/Videos/Rec_83/calib/info" 
     
     extrinsics = load_extrinsics(info_folder)
 
@@ -64,15 +64,15 @@ def main():
     print("Translation l1 ", T_l_1)
     # ... (rest of your print statements) ...
 
-    T_sc_l1 = inverse_transform(R_l_1, T_l_1) # Corresponds to H2
-    T_sc_l0 = inverse_transform(R_l_0, T_l_0) # Corresponds to H1
+    T_sc_l1 = inverse_transform(R_l_1, T_l_1) # Corresponds to T_chess_cam2
+    T_sc_l0 = inverse_transform(R_l_0, T_l_0) # Corresponds to T_chess_cam1
 
-    print("\ntransform of left camera of zed 0 (H1 candidate):")
+    print("\ntransform of left camera of zed 0 (T_chess_cam1 candidate):")
     print(np.array2string(T_sc_l0, separator=', ', formatter={'float_kind': lambda x: "%.4f" % x}))
-    print("\ntransform of left camera of zed 1 (H2 candidate):")
+    print("\ntransform of left camera of zed 1 (T_chess_cam2 candidate):")
     print(np.array2string(T_sc_l1, separator=', ', formatter={'float_kind': lambda x: "%.4f" % x}))
 
-        # --- Prepare data for YAML using ruamel.yaml ---
+    # --- Prepare data for YAML using ruamel.yaml ---
     yaml_data = CommentedMap()
     transforms_map = CommentedMap()
     
@@ -85,33 +85,34 @@ def main():
             result.append(flow_row)
         return result
     
-    # T_0S transform
-    T_0S_matrix = make_matrix_with_flow_rows([
+    # T_robot_chess transform (previously T_0S)
+    T_robot_chess_matrix = make_matrix_with_flow_rows([
         [-1.0, 0.0, 0.0, 0.358],
         [0.0, 1.0, 0.0, 0.03],
         [0.0, 0.0, -1.0, 0.006],
         [0.0, 0.0, 0.0, 1.0]
     ])
-    transforms_map['T_0S'] = T_0S_matrix
+    transforms_map['T_robot_chess'] = T_robot_chess_matrix
     
-    # Add a blank line and comment before H1
-    transforms_map.yaml_set_comment_before_after_key('H1', before='\ncamera 33137761')
+    # Add a blank line and comment before T_chess_cam1
+    transforms_map.yaml_set_comment_before_after_key('T_chess_cam1', before='\ncamera 33137761')
     
-    # H1 transform
-    H1_matrix_list = [[round(float(val), 4) for val in row] for row in T_sc_l0.tolist()]
-    transforms_map['H1'] = make_matrix_with_flow_rows(H1_matrix_list)
+    # T_chess_cam1 transform (previously H1)
+    T_chess_cam1_matrix_list = [[round(float(val), 4) for val in row] for row in T_sc_l0.tolist()]
+    transforms_map['T_chess_cam1'] = make_matrix_with_flow_rows(T_chess_cam1_matrix_list)
     
-    # Add a blank line and comment before H2
-    transforms_map.yaml_set_comment_before_after_key('H2', before='\ncamera 36829049')
+    # Add a blank line and comment before T_chess_cam2
+    transforms_map.yaml_set_comment_before_after_key('T_chess_cam2', before='\ncamera 36829049')
     
-    # H2 transform
-    H2_matrix_list = [[round(float(val), 4) for val in row] for row in T_sc_l1.tolist()]
-    transforms_map['H2'] = make_matrix_with_flow_rows(H2_matrix_list)
+    # T_chess_cam2 transform (previously H2)
+    T_chess_cam2_matrix_list = [[round(float(val), 4) for val in row] for row in T_sc_l1.tolist()]
+    transforms_map['T_chess_cam2'] = make_matrix_with_flow_rows(T_chess_cam2_matrix_list)
     
     yaml_data['transforms'] = transforms_map
     
     # --- Save to YAML file ---
-    output_yaml_path = "/home/chris/franka_ros2_ws/src/zed_pose_estimation/config/transform.yaml"
+    output_yaml_path = "/home/chris/franka_ros2_ws/src/superquadric_grasp_system/config/transform.yaml"
+    
     
     ryaml = RuamelYAML()
     ryaml.indent(mapping=2, sequence=4, offset=2)
