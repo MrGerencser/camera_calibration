@@ -173,7 +173,7 @@ def run_python_script(script_path: Path, input_data: str | None = None, cwd: Pat
 
 
 def main():
-    workspace_path = Path.cwd() # Assumes script is run from /home/chris/camera_calibration
+    workspace_path = Path.cwd()
     
     default_videos_path = Path.home() / "Videos"
     videos_base_input = input(f"Enter the base path for Rec folders (default: {default_videos_path}): ")
@@ -188,6 +188,7 @@ def main():
             print(f"Error: Could not create directory {videos_base_path}: {e}")
             return
 
+    # Original workflow approach
     next_rec_num = get_next_rec_number(videos_base_path)
     new_rec_folder_name = f"Rec_{next_rec_num}"
     new_rec_base_path = videos_base_path / new_rec_folder_name
@@ -239,7 +240,7 @@ def main():
         # 3. Run multicam.py (for ~2 seconds)
         print("Step 3: Running multicam.py to record SVO files...")
         print(f"Ensure {multicam_script} is configured to save to {new_rec_rec_path}")
-        run_python_script(multicam_script, timeout_duration=2) # Runs for 2 seconds
+        run_python_script(multicam_script, timeout_duration=2)
 
         # Run svo_extract.py
         print("\nStep 3 (cont.): Running svo_extract.py...")
@@ -253,7 +254,7 @@ def main():
             print(f"Successfully created directory: {new_calib_folder_path}")
         except OSError as e:
             print(f"Error creating directory {new_calib_folder_path}: {e}")
-            raise # Stop if we can't create this critical folder
+            raise
 
         # Copy recorded files from Rec_X/Rec into Rec_X/calib
         print(f"Copying files and folders from {new_rec_rec_path} to {new_calib_folder_path}...")
@@ -268,7 +269,6 @@ def main():
                         print(f"Copied file: {source_item_path} to {destination_item_path}")
                         copied_items_count += 1
                     elif source_item_path.is_dir():
-                        # Ensure destination subdirectory does not exist if copytree is to create it
                         if destination_item_path.exists():
                              print(f"Warning: Destination directory {destination_item_path} already exists. Skipping copytree for this item to avoid errors. Manual check might be needed.")
                         else:
@@ -283,8 +283,6 @@ def main():
                 print(f"Warning: No files or folders were found in {new_rec_rec_path} to copy.")
         else:
             print(f"Warning: Source folder {new_rec_rec_path} for copying does not exist or is not a directory.")
-            # This might be an issue, depending on whether svo_extract creates files elsewhere.
-            # For now, we'll proceed, but extrinsic_calib might fail.
 
         # 5. Run extrinsic_calib.py
         print("\nStep 5: Running extrinsic_calib.py...")
@@ -302,11 +300,22 @@ def main():
 
     except FileNotFoundError:
         print("Halting automation due to a missing script. Please ensure all required scripts are present.")
-    except subprocess.CalledProcessError:
-        print("Halting automation due to an error in one of the executed scripts. Check output above.")
+    except subprocess.CalledProcessError as e:
+        error_output = getattr(e, 'stderr', '') or getattr(e, 'stdout', '')
+        if "The function is not implemented" in str(error_output) and "cvShowImage" in str(error_output):
+            print("\n--- OpenCV GUI Error Detected ---")
+            print("The extrinsic_calib.py script failed due to missing OpenCV GUI support.")
+            print("This is because cv2.imshow() requires GTK support which is not installed.")
+            print("\nOptions to fix this:")
+            print("1. Install GUI support: sudo apt install libgtk2.0-dev pkg-config && pip install opencv-python")
+            print("2. Modify extrinsic_calib.py to run in headless mode (comment out cv2.imshow lines)")
+            print("3. Set DISPLAY environment variable if running remotely")
+            print("\nThe calibration calculation itself should work fine - it's just the visualization that failed.")
+        else:
+            print("Halting automation due to an error in one of the executed scripts. Check output above.")
     except Exception as e:
         print(f"An unexpected error occurred during workflow execution: {e}")
         print("Automation halted.")
-
+        
 if __name__ == "__main__":
     main()
